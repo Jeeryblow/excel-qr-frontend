@@ -8,22 +8,26 @@
     body { font-family: Arial, sans-serif; margin: 20px; }
     h1 { color: #333; }
     input[type="file"] { margin: 20px 0; }
+    button { padding: 10px 20px; cursor: pointer; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     table, th, td { border: 1px solid #ddd; }
     th, td { padding: 10px; text-align: left; }
     img { max-width: 150px; height: auto; }
+    .error { color: red; margin-top: 10px; }
   </style>
 </head>
 <body>
   <h1>Upload Excel File to Generate QR Codes</h1>
   <input type="file" id="fileInput" accept=".xlsx" />
   <button onclick="uploadFile()">Upload and Process</button>
+  <div id="errorMessage" class="error"></div>
 
   <table id="resultTable">
     <thead>
       <tr>
         <th>Data</th>
         <th>QR Code</th>
+        <th>Error (if any)</th>
       </tr>
     </thead>
     <tbody>
@@ -35,12 +39,19 @@
     async function uploadFile() {
       const fileInput = document.getElementById('fileInput');
       const file = fileInput.files[0];
+      const errorMessage = document.getElementById('errorMessage');
 
       if (!file) {
-        alert('Please select a file.');
+        errorMessage.textContent = 'Please select a file.';
         return;
       }
 
+      if (!file.name.endsWith('.xlsx')) {
+        errorMessage.textContent = 'Please upload a valid .xlsx file.';
+        return;
+      }
+
+      errorMessage.textContent = ''; // Clear previous errors
       const formData = new FormData();
       formData.append('file', file);
 
@@ -51,14 +62,15 @@
         });
 
         if (!response.ok) {
-          throw new Error('Failed to process file.');
+          const errorText = await response.text();
+          throw new Error(`Failed to process file: ${errorText}`);
         }
 
         const data = await response.json();
         displayResults(data);
       } catch (error) {
         console.error('Error:', error);
-        alert('An error occurred while processing the file.');
+        errorMessage.textContent = `An error occurred: ${error.message}`;
       }
     }
 
@@ -70,14 +82,22 @@
         const tr = document.createElement('tr');
         const tdData = document.createElement('td');
         const tdQRCode = document.createElement('td');
+        const tdError = document.createElement('td');
         const img = document.createElement('img');
 
         tdData.textContent = JSON.stringify(row);
-        img.src = row.qrCodeUrl;
+        if (row.qrCodeUrl) {
+          img.src = row.qrCodeUrl;
+          img.alt = 'QR Code';
+          tdQRCode.appendChild(img);
+        } else {
+          tdQRCode.textContent = 'QR Code generation failed';
+        }
 
-        tdQRCode.appendChild(img);
+        tdError.textContent = row.error || '';
         tr.appendChild(tdData);
         tr.appendChild(tdQRCode);
+        tr.appendChild(tdError);
         tableBody.appendChild(tr);
       });
     }
