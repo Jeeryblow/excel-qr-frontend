@@ -85,7 +85,15 @@
         const tdError = document.createElement('td');
         const img = document.createElement('img');
 
-        tdData.textContent = JSON.stringify(row);
+        // Display structured data in a readable format
+        let readableData = '';
+        for (let key in row) {
+          if (key !== 'qrCodeUrl' && key !== 'error') {
+            readableData += `${key}: ${row[key]}\n`;
+          }
+        }
+        tdData.textContent = readableData.trim() || 'No data available';
+
         if (row.qrCodeUrl) {
           img.src = row.qrCodeUrl;
           img.alt = 'QR Code';
